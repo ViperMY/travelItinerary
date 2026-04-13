@@ -1,0 +1,238 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>旅遊行程規劃</title>
+
+  <!-- Leaflet Map -->
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
+  <!-- Flatpickr Date Picker -->
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css">
+
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+<div id="app">
+
+  <!-- ===== Header ===== -->
+  <header id="header">
+    <div class="header-left">
+      <div class="logo">✈ TripPlan</div>
+      <input type="text" id="trip-title" placeholder="輸入旅遊名稱...">
+    </div>
+
+    <div class="header-center">
+      <div class="date-range-wrapper">
+        <span class="icon">📅</span>
+        <input type="text" id="date-range" placeholder="選擇旅遊日期區間..." readonly>
+      </div>
+    </div>
+
+    <div class="header-right">
+      <!-- 協作狀態（連線後顯示） -->
+      <div id="collab-status" class="hidden">
+        <span class="collab-dot" id="collab-dot"></span>
+        <span id="collab-room-label"></span>
+        <button id="btn-leave-collab" class="btn btn-ghost btn-sm">離開</button>
+      </div>
+
+      <button id="btn-collab" class="btn btn-ghost">🤝 協作</button>
+      <button id="btn-export" class="btn btn-ghost">📤 匯出</button>
+      <label class="btn btn-ghost" style="cursor:pointer;">
+        📥 匯入
+        <input type="file" id="import-file" accept=".json" style="display:none">
+      </label>
+    </div>
+  </header>
+
+  <!-- ===== Main ===== -->
+  <div id="main">
+
+    <!-- Sidebar -->
+    <div id="sidebar">
+
+      <!-- Day Tabs -->
+      <div id="day-tabs-scroll">
+        <div id="day-tabs">
+          <!-- rendered by JS -->
+        </div>
+      </div>
+
+      <!-- Attraction List + Add Button -->
+      <div id="day-panel">
+        <div id="day-header">
+          <span id="day-header-title">選擇日期開始規劃</span>
+          <span id="day-header-count" class="badge hidden"></span>
+        </div>
+
+        <div id="attractions-list">
+          <!-- rendered by JS -->
+        </div>
+
+        <div id="sidebar-footer">
+          <button id="btn-add-attraction" class="btn btn-add">
+            ＋ 新增景點
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Map -->
+    <div id="map-container">
+      <div id="map"></div>
+
+      <!-- Map overlay controls -->
+      <div id="map-overlay">
+        <button id="btn-fit-bounds" title="縮放至所有景點">⊡</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ===== Add/Edit Attraction Modal ===== -->
+<div id="modal-overlay" class="overlay hidden">
+  <div id="modal" class="panel">
+    <div class="panel-header">
+      <h3 id="modal-title">新增景點</h3>
+      <button class="icon-btn" id="modal-close">✕</button>
+    </div>
+
+    <div class="panel-body">
+
+      <div class="form-group">
+        <label>景點名稱 / 搜尋</label>
+        <div class="row-gap">
+          <input type="text" id="attraction-name" placeholder="輸入景點名稱後按搜尋...">
+          <button id="btn-search" class="btn btn-primary btn-sm">搜尋地點</button>
+        </div>
+        <div id="search-results" class="search-dropdown hidden"></div>
+      </div>
+
+      <div id="selected-location" class="location-chip hidden">
+        <span class="chip-icon">📍</span>
+        <span id="location-label">-</span>
+        <span id="location-coords" class="coords"></span>
+      </div>
+
+      <div class="form-row">
+        <div class="form-group flex1">
+          <label>抵達時間</label>
+          <input type="time" id="attraction-time" value="09:00">
+        </div>
+        <div class="form-group flex1">
+          <label>停留時間（分鐘）</label>
+          <input type="number" id="attraction-duration" min="15" step="15" value="60" placeholder="60">
+        </div>
+      </div>
+
+      <div class="form-group">
+        <label>備註</label>
+        <textarea id="attraction-notes" placeholder="記錄票價、注意事項、美食推薦…" rows="3"></textarea>
+      </div>
+    </div>
+
+    <div class="panel-footer">
+      <button id="btn-modal-delete" class="btn btn-danger hidden">刪除景點</button>
+      <div class="spacer"></div>
+      <button id="btn-modal-cancel" class="btn btn-secondary">取消</button>
+      <button id="btn-modal-save" class="btn btn-primary">儲存</button>
+    </div>
+  </div>
+</div>
+
+<!-- ===== Collab Modal ===== -->
+<div id="collab-overlay" class="overlay hidden">
+  <div id="collab-modal" class="panel" style="max-width: 500px;">
+    <div class="panel-header">
+      <h3>🤝 即時協作</h3>
+      <button class="icon-btn" id="collab-close">✕</button>
+    </div>
+    <div class="panel-body" id="collab-body">
+
+      <!-- 未設定 Firebase 時顯示 -->
+      <div id="collab-no-firebase" class="hidden">
+        <div class="info-box info-box--warn">
+          <div class="info-title">需要先設定 Firebase</div>
+          <div class="info-desc">
+            協作功能需要 Firebase Realtime Database。<br>
+            請參考下方步驟完成設定。
+          </div>
+        </div>
+        <ol class="setup-steps">
+          <li>前往 <strong>console.firebase.google.com</strong> 建立免費專案</li>
+          <li>新增 Web App（<code>&lt;/&gt;</code> 圖示），複製 <code>firebaseConfig</code></li>
+          <li>進入 <strong>Realtime Database</strong> → 建立資料庫（選測試模式）</li>
+          <li>將設定值填入專案中的 <code>firebase-config.js</code></li>
+          <li>重新整理頁面即可使用協作功能</li>
+        </ol>
+      </div>
+
+      <!-- 已設定 Firebase，顯示房間操作 -->
+      <div id="collab-ready" class="hidden">
+
+        <!-- 建立新房間 -->
+        <div class="collab-section">
+          <div class="collab-section-title">建立協作房間</div>
+          <p class="collab-desc">將目前行程上傳並產生一組房間碼，傳給朋友即可一起編輯。</p>
+          <button id="btn-create-room" class="btn btn-primary" style="width:100%">
+            ＋ 建立新房間
+          </button>
+        </div>
+
+        <div class="collab-divider">或</div>
+
+        <!-- 加入現有房間 -->
+        <div class="collab-section">
+          <div class="collab-section-title">加入朋友的房間</div>
+          <p class="collab-desc">輸入朋友傳來的 6 位房間碼，載入並同步行程。</p>
+          <div class="row-gap">
+            <input type="text" id="room-code-input" placeholder="例：ABC123"
+                   maxlength="6" style="text-transform:uppercase; letter-spacing:.15em; font-size:16px; font-weight:700;">
+            <button id="btn-join-room" class="btn btn-primary">加入</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- 已進入房間後顯示 -->
+      <div id="collab-active" class="hidden">
+        <div class="info-box info-box--success">
+          <div class="info-title">協作進行中</div>
+          <div class="info-desc">所有變更會即時同步給房間內的所有人。</div>
+        </div>
+        <div class="room-code-display">
+          <div class="room-label">房間碼</div>
+          <div class="room-code" id="room-code-display"></div>
+        </div>
+        <div class="collab-section-title" style="margin-bottom:6px">分享連結</div>
+        <div class="row-gap">
+          <input type="text" id="collab-share-url" readonly
+                 style="font-size:12px; color:var(--text-light); background:var(--bg);">
+          <button id="btn-copy-collab" class="btn btn-primary">複製</button>
+        </div>
+        <button id="btn-leave-room" class="btn btn-secondary" style="width:100%; margin-top:12px;">
+          離開協作房間
+        </button>
+      </div>
+
+    </div>
+  </div>
+</div>
+
+<!-- ===== Toast ===== -->
+<div id="toast" class="hidden"></div>
+
+<!-- Scripts -->
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
+<script src="https://cdn.jsdelivr.net/npm/flatpickr/dist/l10n/zh-tw.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/sortablejs@1.15.2/Sortable.min.js"></script>
+<!-- Firebase SDK (Realtime Database) -->
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-database-compat.js"></script>
+<!-- 你的 Firebase 設定 -->
+<script src="firebase-config.js"></script>
+<script src="app.js"></script>
+</body>
+</html>
