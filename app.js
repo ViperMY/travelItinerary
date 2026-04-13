@@ -107,10 +107,17 @@ function save() {
   syncToFirebase();
 }
 
+function normalizeTripData(trip) {
+  if (!trip.days || typeof trip.days !== 'object' || Array.isArray(trip.days)) {
+    trip.days = {};
+  }
+  return trip;
+}
+
 function load() {
   try {
     const raw = localStorage.getItem(STORAGE_KEY);
-    if (raw) { state.trip = JSON.parse(raw); return true; }
+    if (raw) { state.trip = normalizeTripData(JSON.parse(raw)); return true; }
   } catch (_) { /* ignore */ }
   return false;
 }
@@ -242,6 +249,7 @@ function renderTabs() {
     return;
   }
 
+  if (!state.trip.days) state.trip.days = {};
   const days = daysInRange(state.trip.startDate, state.trip.endDate);
   container.innerHTML = days.map((day, i) => {
     const count = (state.trip.days[day] || []).length;
@@ -800,7 +808,7 @@ function joinRoom(roomId, upload = false) {
       .then(snapshot => {
         const data = snapshot.val();
         if (!data) { showToast('找不到此房間，請確認房間碼'); return; }
-        state.trip    = data;
+        state.trip    = normalizeTripData(data);
         state.currentDay = state.trip.startDate || null;
         save();
         reinit();
@@ -828,7 +836,7 @@ function startListening(ref) {
     const local  = JSON.stringify(state.trip);
     if (remote === local) return;
 
-    state.trip = data;
+    state.trip = normalizeTripData(data);
     if (!state.currentDay && state.trip.startDate) {
       state.currentDay = state.trip.startDate;
     }
