@@ -609,7 +609,7 @@ function importTrip(file) {
   const reader = new FileReader();
   reader.onload = (e) => {
     try {
-      state.trip    = JSON.parse(e.target.result);
+      state.trip    = normalizeTripData(JSON.parse(e.target.result));
       state.currentDay = state.trip.startDate || null;
       save();
       reinit();
@@ -634,7 +634,7 @@ function checkUrlParams() {
   const tripParam = params.get('trip');
   if (!tripParam) return;
   try {
-    state.trip = JSON.parse(decodeURIComponent(escape(atob(tripParam))));
+    state.trip = normalizeTripData(JSON.parse(decodeURIComponent(escape(atob(tripParam)))));
     state.currentDay = state.trip.startDate || null;
     save();
     history.replaceState({}, '', location.pathname);
@@ -968,7 +968,8 @@ document.addEventListener('DOMContentLoaded', () => {
   const urlParams = new URLSearchParams(location.search);
   const roomParam = urlParams.get('room');
 
-  load();             // load from localStorage
+  load();                          // load from localStorage
+  normalizeTripData(state.trip);   // ensure days is always a valid object
 
   if (!state.currentDay && state.trip.startDate) {
     state.currentDay = state.trip.startDate;
