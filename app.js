@@ -96,6 +96,7 @@ function getDayColor(dayStr) {
 
 function currentAttractions() {
   if (!state.currentDay) return [];
+  if (!state.trip.days) return [];
   return state.trip.days[state.currentDay] || [];
 }
 
@@ -418,6 +419,7 @@ function saveAttraction() {
 
   if (!name) { showToast('請輸入景點名稱'); return; }
 
+  if (!state.trip.days) state.trip.days = {};
   if (!state.trip.days[state.currentDay]) {
     state.trip.days[state.currentDay] = [];
   }
