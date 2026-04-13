@@ -577,6 +577,7 @@ function initDatePicker() {
       }
 
       save();
+      updateMobileDateText();
       renderTabs();
       renderAttractions();
       updateMap();
@@ -724,6 +725,7 @@ function bindEvents() {
 
 function reinit() {
   document.getElementById('trip-title').value = state.trip.title || '我的旅遊計畫';
+  updateMobileDateText();
 
   // Re-init date picker with current values
   if (state.flatpickrInstance) {
@@ -961,6 +963,94 @@ function bindCollabEvents() {
 
 // ===== Boot =====
 
+// ===== Mobile RWD =====
+
+function isMobile() {
+  return window.innerWidth < 768;
+}
+
+/** 切換手機底部 tab（itinerary / map） */
+function setMobileView(view) {
+  const sidebar      = document.getElementById('sidebar');
+  const mapContainer = document.getElementById('map-container');
+  const navItin      = document.getElementById('nav-itinerary');
+  const navMap       = document.getElementById('nav-map');
+
+  if (view === 'map') {
+    sidebar.classList.add('mobile-hidden');
+    mapContainer.classList.remove('mobile-hidden');
+    navItin.classList.remove('active');
+    navMap.classList.add('active');
+    // Leaflet 需要在 visible 後重新計算尺寸
+    setTimeout(() => state.map?.invalidateSize(), 150);
+  } else {
+    mapContainer.classList.add('mobile-hidden');
+    sidebar.classList.remove('mobile-hidden');
+    navMap.classList.remove('active');
+    navItin.classList.add('active');
+  }
+}
+
+/** 更新手機版日期顯示文字 */
+function updateMobileDateText() {
+  const el = document.getElementById('mobile-date-text');
+  if (!el) return;
+  if (state.trip.startDate && state.trip.endDate) {
+    el.textContent = `${fmtDate(state.trip.startDate)} → ${fmtDate(state.trip.endDate)}`;
+  } else {
+    el.textContent = '點此選擇旅遊日期';
+  }
+}
+
+function initMobileNav() {
+  // 底部 tab 切換
+  document.getElementById('nav-itinerary')?.addEventListener('click', () => setMobileView('itinerary'));
+  document.getElementById('nav-map')?.addEventListener('click', () => setMobileView('map'));
+
+  // 手機版日期觸發
+  document.getElementById('mobile-date-trigger')?.addEventListener('click', () => {
+    state.flatpickrInstance?.open();
+  });
+
+  // FAB 新增景點
+  document.getElementById('fab-add')?.addEventListener('click', () => {
+    if (!state.currentDay) { showToast('請先選擇旅遊日期'); return; }
+    openAddModal();
+  });
+
+  // 漢堡選單
+  const menuBtn      = document.getElementById('btn-mobile-menu');
+  const menuDropdown = document.getElementById('mobile-menu-dropdown');
+  menuBtn?.addEventListener('click', (e) => {
+    e.stopPropagation();
+    menuDropdown.classList.toggle('hidden');
+  });
+  document.addEventListener('click', () => menuDropdown?.classList.add('hidden'));
+
+  // 漢堡選單中的匯出／匯入
+  document.getElementById('btn-export-m')?.addEventListener('click', () => {
+    exportTrip();
+    menuDropdown?.classList.add('hidden');
+  });
+  document.getElementById('import-file-m')?.addEventListener('change', (e) => {
+    if (e.target.files[0]) importTrip(e.target.files[0]);
+    e.target.value = '';
+    menuDropdown?.classList.add('hidden');
+  });
+
+  // 視窗縮放時修正地圖
+  window.addEventListener('resize', () => {
+    if (!isMobile()) {
+      // 回到桌面：移除所有手機 hidden 狀態
+      document.getElementById('sidebar')?.classList.remove('mobile-hidden');
+      document.getElementById('map-container')?.classList.remove('mobile-hidden');
+    }
+    state.map?.invalidateSize();
+  });
+}
+
+// ===== Boot =====
+
 document.addEventListener('DOMContentLoaded', () => {
   initFirebase();
 
@@ -979,13 +1069,20 @@ document.addEventListener('DOMContentLoaded', () => {
   initDatePicker();
   bindEvents();
   bindCollabEvents();
+  initMobileNav();
 
   document.getElementById('trip-title').value = state.trip.title || '我的旅遊計畫';
+  updateMobileDateText();
 
   renderTabs();
   renderAttractions();
   updateMap();
   rebindSortable();
+
+  // 手機預設顯示行程 view
+  if (isMobile()) {
+    document.getElementById('map-container').classList.add('mobile-hidden');
+  }
 
   // Join room from URL after UI is ready
   if (roomParam && state.collab.enabled) {

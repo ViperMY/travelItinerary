@@ -39,11 +39,23 @@
       </div>
 
       <button id="btn-collab" class="btn btn-ghost">🤝 協作</button>
-      <button id="btn-export" class="btn btn-ghost">📤 匯出</button>
-      <label class="btn btn-ghost" style="cursor:pointer;">
+      <button id="btn-export" class="btn btn-ghost desktop-only">📤 匯出</button>
+      <label class="btn btn-ghost desktop-only" style="cursor:pointer;">
         📥 匯入
         <input type="file" id="import-file" accept=".json" style="display:none">
       </label>
+
+      <!-- 手機版漢堡選單 -->
+      <div class="mobile-menu-wrapper mobile-only">
+        <button id="btn-mobile-menu" class="btn btn-ghost">⋯</button>
+        <div id="mobile-menu-dropdown" class="hidden">
+          <button id="btn-export-m" class="menu-item">📤 匯出行程</button>
+          <label class="menu-item" style="cursor:pointer;">
+            📥 匯入行程
+            <input type="file" id="import-file-m" accept=".json" style="display:none">
+          </label>
+        </div>
+      </div>
     </div>
   </header>
 
@@ -52,6 +64,14 @@
 
     <!-- Sidebar -->
     <div id="sidebar">
+
+      <!-- 手機版日期選擇列 -->
+      <div id="mobile-date-bar" class="mobile-only">
+        <div id="mobile-date-trigger" class="mobile-date-inner">
+          <span>📅</span>
+          <span id="mobile-date-text">點此選擇旅遊日期</span>
+        </div>
+      </div>
 
       <!-- Day Tabs -->
       <div id="day-tabs-scroll">
@@ -87,8 +107,24 @@
       <div id="map-overlay">
         <button id="btn-fit-bounds" title="縮放至所有景點">⊡</button>
       </div>
+
+      <!-- 手機版 FAB -->
+      <button id="fab-add" class="fab mobile-only" title="新增景點">＋</button>
     </div>
   </div>
+
+  <!-- 手機版底部導覽列 -->
+  <nav id="mobile-nav" class="mobile-only">
+    <button class="mobile-nav-btn active" id="nav-itinerary">
+      <span class="nav-icon">📋</span>
+      <span class="nav-label">行程</span>
+    </button>
+    <button class="mobile-nav-btn" id="nav-map">
+      <span class="nav-icon">🗺️</span>
+      <span class="nav-label">地圖</span>
+    </button>
+  </nav>
+
 </div>
 
 <!-- ===== Add/Edit Attraction Modal ===== -->
